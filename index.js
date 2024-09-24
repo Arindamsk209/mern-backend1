@@ -4,26 +4,17 @@ const mongoose = require("mongoose");
 const User = require('./models/User');
 const Post = require('./models/Post');
 const bcrypt = require('bcryptjs');
-const app = express(); 
+const app = express();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const multer = require('multer');
-const uploadMiddleware = multer({ dest: 'uploads/' });
-const fs = require('fs');
 
 const salt = bcrypt.genSaltSync(10);
 const secret = 'asdfe45we45w345wegw345werjktjwertkj';
 const port = process.env.PORT || 4000;
 
-// Correct CORS configuration
-app.use(cors({
-  credentials: true,
-  origin: 'https://fascinating-truffle-d8d0b4.netlify.app'  // Remove trailing slash
-}));
-
+app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/uploads', express.static(__dirname + '/uploads'));
 
 mongoose.connect('mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority');
 
@@ -48,13 +39,10 @@ app.post('/login', async (req, res) => {
   const userDoc = await User.findOne({ username });
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
+    // logged in
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) throw err;
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: true,      // Enable secure cookie
-        sameSite: 'None'   // Correct SameSite attribute
-      }).json({
+      res.cookie('token', token).json({
         id: userDoc._id,
         username,
       });
@@ -64,7 +52,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Get user profile
+// User information header
 app.get('/profile', (req, res) => {
   const { token } = req.cookies;
   jwt.verify(token, secret, {}, (err, info) => {
@@ -73,32 +61,22 @@ app.get('/profile', (req, res) => {
   });
 });
 
-// Logout route
 app.post('/logout', (req, res) => {
-  res.cookie('token', '', {
-    httpOnly: true,
-    secure: true,      // Enable secure cookie
-    sameSite: 'None'   // Correct SameSite attribute
-  }).json('ok');
+  res.cookie('token', '').json('ok');
 });
 
-// Create Post
-app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
-  const { originalname, path } = req.file;
-  const parts = originalname.split('.');
-  const ext = parts[parts.length - 1];
-  const newPath = path + '.' + ext;
-  fs.renameSync(path, newPath);
-
+// Create Post Page
+app.post('/post', async (req, res) => {
+  const { title, summary, content, cover } = req.body; // Get cover image URL from request
   const { token } = req.cookies;
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) throw err;
-    const { title, summary, content } = req.body;
+
     const postDoc = await Post.create({
       title,
       summary,
       content,
-      cover: newPath,
+      cover, // Use the URL directly
       author: info.id,
     });
     res.json(postDoc);
@@ -106,20 +84,11 @@ app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
 });
 
 // Edit Post
-app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
-  let newPath = null;
-  if (req.file) {
-    const { originalname, path } = req.file;
-    const parts = originalname.split('.');
-    const ext = parts[parts.length - 1];
-    newPath = path + '.' + ext;
-    fs.renameSync(path, newPath);
-  }
-
+app.put('/post', async (req, res) => {
+  const { id, title, summary, content, cover } = req.body; // Get cover image URL from request
   const { token } = req.cookies;
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) throw err;
-    const { id, title, summary, content } = req.body;
     const postDoc = await Post.findById(id);
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {
@@ -129,14 +98,14 @@ app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
       title,
       summary,
       content,
-      cover: newPath ? newPath : postDoc.cover,
+      cover: cover ? cover : postDoc.cover, // Update with new URL if provided
     });
 
     res.json(postDoc);
   });
 });
 
-// Get all posts
+// Show the post at home page
 app.get('/post', async (req, res) => {
   res.json(
     await Post.find()
@@ -146,7 +115,7 @@ app.get('/post', async (req, res) => {
   );
 });
 
-// Get a specific post
+// Post Page
 app.get('/post/:id', async (req, res) => {
   const { id } = req.params;
   const postDoc = await Post.findById(id).populate('author', ['username']);

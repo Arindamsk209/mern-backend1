@@ -8,11 +8,11 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 const salt = bcrypt.genSaltSync(10);
-const secret = process.env.JWT_SECRET || 'asdfe45we45w345wegw345werjktjwertkj'; // Ensure to use process.env
+const secret = process.env.JWT_SECRET || 'your_jwt_secret'; // Change to your actual secret
 const port = process.env.PORT || 4000;
 
 // Initialize the Express app
-const app = express(); // <-- Initialize app here
+const app = express(); 
 
 app.use(cors({
   credentials: true,
@@ -24,7 +24,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect('mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority', {
+mongoose.connect('your_mongodb_connection_string', { // Make sure to replace with your actual connection string
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -39,7 +39,6 @@ app.post('/login', async (req, res) => {
   
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
-    // logged in
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) return res.status(500).json({ error: 'Failed to create token' });
       res.cookie('token', token, { httpOnly: true, secure: true }); // Ensure secure cookie in production
@@ -65,7 +64,7 @@ app.post('/register', async (req, res) => {
     res.json(userDoc);
   } catch (e) {
     console.log(e);
-    res.status(400).json(e.message); // Improved error response
+    res.status(400).json(e.message);
   }
 });
 
@@ -111,14 +110,14 @@ app.put('/post', async (req, res) => {
       summary,
       content,
       cover,
-    }, { new: true }); // Return the updated document
+    }, { new: true });
     res.json(postDoc);
   });
 });
 
 // Get User Profile
 app.get('/profile', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Extract Bearer token
+  const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
@@ -139,13 +138,17 @@ app.get('/profile', async (req, res) => {
 });
 
 // Show the post at home page
-app.get('/post', async (req, res) => {
-  const posts = await Post.find()
-    .populate('author', ['username'])
-    .sort({ createdAt: -1 })
-    .limit(20);
-  
-  res.json(posts);
+app.get('/posts', async (req, res) => { // Updated from /post to /posts
+  try {
+    const posts = await Post.find()
+      .populate('author', ['username'])
+      .sort({ createdAt: -1 })
+      .limit(20);
+    
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
 });
 
 // Logout
@@ -157,11 +160,15 @@ app.post('/logout', async (req, res) => {
 // Post Page
 app.get('/post/:id', async (req, res) => {
   const { id } = req.params;
-  const postDoc = await Post.findById(id).populate('author', ['username']);
-  if (!postDoc) {
-    return res.status(404).json({ error: 'Post not found' });
+  try {
+    const postDoc = await Post.findById(id).populate('author', ['username']);
+    if (!postDoc) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    res.json(postDoc);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch post' });
   }
-  res.json(postDoc);
 });
 
 // Start the server

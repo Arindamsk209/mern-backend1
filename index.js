@@ -15,8 +15,10 @@ const port = process.env.PORT || 4000;
 app.use(cors({
   credentials: true,
   origin: ['https://fascinating-truffle-d8d0b4.netlify.app', 'https://mern-backend1-1.onrender.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 

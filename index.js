@@ -2,14 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require("mongoose");
 const User = require('./models/User');
-const Post = require('./models/Post');
+const Post = require('./models/Post'); // Ensure Post model is imported
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 const salt = bcrypt.genSaltSync(10);
-const secret = process.env.JWT_SECRET || 'asdfe45we45w345wegw345werjktjwertkj'; // Make sure to use process.env
+const secret = process.env.JWT_SECRET || 'asdfe45we45w345wegw345werjktjwertkj'; // Ensure to use process.env
 const port = process.env.PORT || 4000;
+
+// Initialize the Express app
+const app = express(); // <-- Initialize app here
 
 app.use(cors({
   credentials: true,
@@ -161,6 +164,7 @@ app.get('/post/:id', async (req, res) => {
   res.json(postDoc);
 });
 
+// Start the server
 app.listen(port, () => { 
   console.log(`Server is running on port ${port}`);
 });

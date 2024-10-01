@@ -9,15 +9,15 @@ const cookieParser = require('cookie-parser');
 
 const app = express();
 const salt = bcrypt.genSaltSync(10);
-const secret = process.env.JWT_SECRET || 'your-default-secret'; // Ensure to set this in your environment
+const secret = process.env.JWT_SECRET || 'your-default-secret';
 const port = process.env.PORT || 4000;
 
-// MongoDB connection string stored in environment variable
+// MongoDB connection string
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://username:password@cluster1.mongodb.net/myDatabase?retryWrites=true&w=majority';
 mongoose.connect(mongoURI);
 
 const corsOptions = {
-  origin: 'https://fascinating-truffle-d8d0b4.netlify.app', // Your frontend URL
+  origin: 'https://fascinating-truffle-d8d0b4.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 };
@@ -98,20 +98,15 @@ app.post('/post', async (req, res) => {
     if (err) {
       return errorResponse(res, 401, 'Unauthorized');
     }
-
-    try {
-      const postDoc = await Post.create({
-        title,
-        summary,
-        content,
-        cover,
-        author: info.id,
-      });
-      res.json(postDoc);
-    } catch (error) {
-      console.error('Error creating post:', error); // Log the error for debugging
-      return errorResponse(res, 500, 'Error creating post');
-    }
+    
+    const postDoc = await Post.create({
+      title,
+      summary,
+      content,
+      cover,
+      author: info.id,
+    });
+    res.json(postDoc);
   });
 });
 

@@ -45,7 +45,6 @@ app.post('/login', async (req, res) => {
   const userDoc = await User.findOne({ username });
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
-    // logged in
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) throw err;
       res.cookie('token', token).json({
@@ -77,7 +76,6 @@ app.post('/post', async (req, res) => {
   const { token } = req.cookies;
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) throw err;
-
     const postDoc = await Post.create({
       title,
       summary,
@@ -106,7 +104,6 @@ app.put('/post', async (req, res) => {
       content,
       cover: cover ? cover : postDoc.cover, // Update with new URL if provided
     });
-
     res.json(postDoc);
   });
 });
@@ -129,5 +126,5 @@ app.get('/post/:id', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log('Server is running on port 4000');
-});
+  console.log('Server is running on port 4000
+

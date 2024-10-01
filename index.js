@@ -77,7 +77,7 @@ app.post('/logout', (req, res) => {
 
 // Create Post Page
 app.post('/post', async (req, res) => {
-  const { token } = req.cookies;
+  const token = req.headers.authorization;
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -86,7 +86,6 @@ app.post('/post', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { title, summary, content, cover } = req.body;
     const postDoc = await Post.create({
       title,
       summary,
@@ -100,7 +99,7 @@ app.post('/post', async (req, res) => {
 
 // Edit Post
 app.put('/post', async (req, res) => {
-  const { token } = req.cookies;
+  const token = req.headers.authorization;
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -124,7 +123,6 @@ app.put('/post', async (req, res) => {
     res.json(postDoc);
   });
 });
-
 // Show the post at home page
 app.get('/post', async (req, res) => {
   res.json(

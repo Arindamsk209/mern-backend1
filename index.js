@@ -60,7 +60,7 @@ app.post('/register', async (req, res) => {
 
 // Create Post Page
 app.post('/post', async (req, res) => {
-  const token = req.headers.authorization;
+  const token = req.cookies.token;
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -83,7 +83,7 @@ app.post('/post', async (req, res) => {
 
 // Edit Post Page
 app.put('/post', async (req, res) => {
-  const token = req.headers.authorization;
+  const token = req.cookies.token;
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }

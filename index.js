@@ -36,15 +36,23 @@ mongoose.connect(mongoConnectionString, {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const userDoc = await User.findOne({ username });
+  
   if (!userDoc) {
     return res.status(400).json('User not found');
   }
   
   const passOk = bcrypt.compareSync(password, userDoc.password);
+  
   if (passOk) {
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) return res.status(500).json({ error: 'Failed to create token' });
-      res.cookie('token', token, { httpOnly: true, secure: true }); // Ensure secure cookie in production
+      
+      // Set cookie with secure option based on environment
+      res.cookie('token', token, { 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production' // Set secure only in production
+      }); 
+      
       res.json({
         id: userDoc._id,
         username,

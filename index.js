@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const User = require('./models/User'); 
 const Post = require('./models/Post');
 const bcrypt = require('bcryptjs');
+const app = express();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
@@ -17,7 +18,6 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
 };
 
-const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
@@ -44,56 +44,48 @@ app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const userDoc = await User.findOne({ username });
   if (!userDoc) {
-    return res.status(400).json('wrong credentials');
+    return res.status(400).json('User not found');
   }
 
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) throw err;
-      res.cookie('token', token).json({
+      res.cookie('token', token, { httpOnly: true }).json({
         id: userDoc._id,
         username,
       });
     });
   } else {
-    res.status(400).json('wrong credentials');
+    res.status(400).json('Wrong credentials');
   }
 });
 
 // User information header
 app.get('/profile', (req, res) => {
-  const token = req.cookies.token; // Check token directly
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
+  const { token } = req.cookies;
   jwt.verify(token, secret, {}, (err, info) => {
     if (err) {
-      console.error('JWT verification error:', err); // Log the error
-      return res.status(403).json({ message: 'Token is invalid' });
+      return res.status(401).json('Unauthorized');
     }
     res.json(info);
   });
 });
 
 app.post('/logout', (req, res) => {
-  res.cookie('token', '').json('ok');
+  res.cookie('token', '', { httpOnly: true }).json('ok');
 });
 
 // Create Post Page
 app.post('/post', async (req, res) => {
   const { title, summary, content, cover } = req.body; // Get cover image URL from request
-  const token = req.cookies.token; // Get token from cookies
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
+  const { token } = req.cookies;
+  
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) {
-      console.error('JWT verification error:', err); // Log the error
-      return res.status(403).json({ message: 'Token is invalid' });
+      return res.status(401).json('Unauthorized');
     }
+    
     const postDoc = await Post.create({
       title,
       summary,
@@ -108,27 +100,30 @@ app.post('/post', async (req, res) => {
 // Edit Post
 app.put('/post', async (req, res) => {
   const { id, title, summary, content, cover } = req.body; // Get cover image URL from request
-  const token = req.cookies.token; // Get token from cookies
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+  const { token } = req.cookies;
 
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) {
-      console.error('JWT verification error:', err); // Log the error
-      return res.status(403).json({ message: 'Token is invalid' });
+      return res.status(401).json('Unauthorized');
     }
+
     const postDoc = await Post.findById(id);
+    if (!postDoc) {
+      return res.status(404).json('Post not found');
+    }
+
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {
-      return res.status(400).json('you are not the author');
+      return res.status(403).json('You are not the author');
     }
+
     await postDoc.updateOne({
       title,
       summary,
       content,
-      cover: cover ? cover : postDoc.cover, // Update with new URL if provided
+      cover: cover || postDoc.cover, // Update with new URL if provided
     });
+    
     res.json(postDoc);
   });
 });

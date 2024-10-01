@@ -121,10 +121,23 @@ app.get('/post', async (req, res) => {
 // Post Page
 app.get('/post/:id', async (req, res) => {
   const { id } = req.params;
-  const postDoc = await Post.findById(id).populate('author', ['username']);
-  res.json(postDoc);
+
+  try {
+    const postDoc = await Post.findById(id).populate('author', ['username']);
+
+    if (!postDoc) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    res.json(postDoc);
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.listen(port, () => {
-  console.log('Server is running on port 4000
+  console.log('Server is running on port 4000');
+});
+
 

@@ -14,7 +14,9 @@ const port = process.env.PORT || 4000;
 
 // MongoDB connection string
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://username:password@cluster1.mongodb.net/myDatabase?retryWrites=true&w=majority';
-mongoose.connect(mongoURI);
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
 const corsOptions = {
   origin: 'https://fascinating-truffle-d8d0b4.netlify.app',

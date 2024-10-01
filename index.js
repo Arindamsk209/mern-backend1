@@ -98,15 +98,20 @@ app.post('/post', async (req, res) => {
     if (err) {
       return errorResponse(res, 401, 'Unauthorized');
     }
-    
-    const postDoc = await Post.create({
-      title,
-      summary,
-      content,
-      cover,
-      author: info.id,
-    });
-    res.json(postDoc);
+
+    try {
+      const postDoc = await Post.create({
+        title,
+        summary,
+        content,
+        cover,
+        author: info.id,
+      });
+      res.json(postDoc);
+    } catch (error) {
+      console.error('Error creating post:', error); // Log the error for debugging
+      return errorResponse(res, 500, 'Error creating post');
+    }
   });
 });
 

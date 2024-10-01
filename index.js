@@ -12,7 +12,11 @@ const salt = bcrypt.genSaltSync(10);
 const secret = process.JWT_SECRET ||'asdfe45we45w345wegw345werjktjwertkj';
 const port = process.env.PORT || 4000;
 
-app.use(cors({ credentials: true, origin: ['https://fascinating-truffle-d8d0b4.netlify.app', 'https://mern-backend1-1.onrender.com'] }));
+app.use(cors({
+  credentials: true,
+  origin: ['https://fascinating-truffle-d8d0b4.netlify.app', 'https://mern-backend1-1.onrender.com'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(cookieParser());
 

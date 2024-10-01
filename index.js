@@ -13,6 +13,13 @@ const secret = 'asdfe45we45w345wegw345werjktjwertkj';
 const port = process.env.PORT || 4000;
 
 app.use(cors({ credentials: true, origin: 'https://fascinating-truffle-d8d0b4.netlify.app' }));
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://fascinating-truffle-d8d0b4.netlify.app');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 app.use(express.json());
 app.use(cookieParser());
 

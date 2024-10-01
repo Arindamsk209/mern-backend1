@@ -105,12 +105,13 @@ app.put('/post', async (req, res) => {
   });
 });
 
-// Profile Page
 app.get('/profile', async (req, res) => {
-  const token = req.cookies.token;
+  const token = req.headers.authorization?.split(' ')[1]; // Extract Bearer token
+
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
+
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) {
       return res.status(401).json({ error: 'Invalid token' });
@@ -120,9 +121,11 @@ app.get('/profile', async (req, res) => {
     if (!userDoc) {
       return res.status(404).json({ error: 'User not found' });
     }
+
     res.json(userDoc);
   });
 });
+
 
 // Show the post at home page
 app.get('/post', async (req, res) => {

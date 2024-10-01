@@ -4,25 +4,32 @@ const mongoose = require("mongoose");
 const User = require('./models/User'); 
 const Post = require('./models/Post');
 const bcrypt = require('bcryptjs');
-const app = express();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
+const app = express();
 const salt = bcrypt.genSaltSync(10);
-const secret = process.env.JWT_SECRET || 'your-default-secret'; // Use environment variable for JWT secret
+const secret = process.env.JWT_SECRET || 'your-default-secret'; // Ensure to set this in your environment
 const port = process.env.PORT || 4000;
+
+// MongoDB connection string stored in environment variable
+const mongoURI = process.env.MONGO_URI || 'mongodb+srv://username:password@cluster1.mongodb.net/myDatabase?retryWrites=true&w=majority';
+mongoose.connect(mongoURI);
 
 const corsOptions = {
   origin: 'https://fascinating-truffle-d8d0b4.netlify.app', // Your frontend URL
-  credentials: true, // Allow credentials (JWT cookies)
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect('mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority');
+// Utility function for error response
+const errorResponse = (res, statusCode, message) => {
+  return res.status(statusCode).json({ error: message });
+};
 
 // Register Page
 app.post('/register', async (req, res) => {
@@ -35,7 +42,7 @@ app.post('/register', async (req, res) => {
     res.json(userDoc);
   } catch (e) {
     console.log(e);
-    res.status(400).json(e);
+    return errorResponse(res, 400, e.message || 'Registration failed');
   }
 });
 
@@ -44,29 +51,31 @@ app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const userDoc = await User.findOne({ username });
   if (!userDoc) {
-    return res.status(400).json('User not found');
+    return errorResponse(res, 400, 'User not found');
   }
 
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
-    jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
-      if (err) throw err;
-      res.cookie('token', token, { httpOnly: true }).json({
-        id: userDoc._id,
-        username,
-      });
+    const token = jwt.sign({ username, id: userDoc._id }, secret);
+    res.cookie('token', token, { httpOnly: true }).json({
+      id: userDoc._id,
+      username,
     });
   } else {
-    res.status(400).json('Wrong credentials');
+    return errorResponse(res, 400, 'Wrong credentials');
   }
 });
 
 // User information header
 app.get('/profile', (req, res) => {
   const { token } = req.cookies;
+  if (!token) {
+    return errorResponse(res, 401, 'Unauthorized');
+  }
+
   jwt.verify(token, secret, {}, (err, info) => {
     if (err) {
-      return res.status(401).json('Unauthorized');
+      return errorResponse(res, 401, 'Unauthorized');
     }
     res.json(info);
   });
@@ -78,19 +87,23 @@ app.post('/logout', (req, res) => {
 
 // Create Post Page
 app.post('/post', async (req, res) => {
-  const { title, summary, content, cover } = req.body; // Get cover image URL from request
+  const { title, summary, content, cover } = req.body;
   const { token } = req.cookies;
-  
+
+  if (!token) {
+    return errorResponse(res, 401, 'Unauthorized');
+  }
+
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) {
-      return res.status(401).json('Unauthorized');
+      return errorResponse(res, 401, 'Unauthorized');
     }
     
     const postDoc = await Post.create({
       title,
       summary,
       content,
-      cover, // Use the URL directly
+      cover,
       author: info.id,
     });
     res.json(postDoc);
@@ -99,29 +112,33 @@ app.post('/post', async (req, res) => {
 
 // Edit Post
 app.put('/post', async (req, res) => {
-  const { id, title, summary, content, cover } = req.body; // Get cover image URL from request
+  const { id, title, summary, content, cover } = req.body;
   const { token } = req.cookies;
+
+  if (!token) {
+    return errorResponse(res, 401, 'Unauthorized');
+  }
 
   jwt.verify(token, secret, {}, async (err, info) => {
     if (err) {
-      return res.status(401).json('Unauthorized');
+      return errorResponse(res, 401, 'Unauthorized');
     }
 
     const postDoc = await Post.findById(id);
     if (!postDoc) {
-      return res.status(404).json('Post not found');
+      return errorResponse(res, 404, 'Post not found');
     }
 
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {
-      return res.status(403).json('You are not the author');
+      return errorResponse(res, 403, 'You are not the author');
     }
 
     await postDoc.updateOne({
       title,
       summary,
       content,
-      cover: cover || postDoc.cover, // Update with new URL if provided
+      cover: cover || postDoc.cover,
     });
     
     res.json(postDoc);
@@ -144,15 +161,13 @@ app.get('/post/:id', async (req, res) => {
 
   try {
     const postDoc = await Post.findById(id).populate('author', ['username']);
-
     if (!postDoc) {
-      return res.status(404).json({ message: 'Post not found' });
+      return errorResponse(res, 404, 'Post not found');
     }
-
     res.json(postDoc);
   } catch (error) {
     console.error('Error fetching post:', error);
-    res.status(500).json({ message: 'Server error' });
+    return errorResponse(res, 500, 'Server error');
   }
 });
 

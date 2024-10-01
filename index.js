@@ -24,7 +24,10 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect('your_mongodb_connection_string', { // Make sure to replace with your actual connection string
+const mongoConnectionString = 'mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority';
+
+// Connect to MongoDB
+mongoose.connect(mongoConnectionString, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

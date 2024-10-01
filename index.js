@@ -14,7 +14,7 @@ const port = process.env.PORT || 4000;
 
 // MongoDB connection string
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://username:password@cluster1.mongodb.net/myDatabase?retryWrites=true&w=majority';
-mongoose.connect(mongoURI);
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 const corsOptions = {
   origin: 'https://fascinating-truffle-d8d0b4.netlify.app',
@@ -39,7 +39,7 @@ app.post('/register', async (req, res) => {
       username,
       password: bcrypt.hashSync(password, salt),
     });
-    res.json(userDoc);
+    res.status(201).json({ id: userDoc._id, username: userDoc.username });
   } catch (e) {
     console.log(e);
     return errorResponse(res, 400, e.message || 'Registration failed');
@@ -49,20 +49,24 @@ app.post('/register', async (req, res) => {
 // Login Page
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const userDoc = await User.findOne({ username });
-  if (!userDoc) {
-    return errorResponse(res, 400, 'User not found');
-  }
+  try {
+    const userDoc = await User.findOne({ username });
+    if (!userDoc) {
+      return errorResponse(res, 400, 'User not found');
+    }
 
-  const passOk = bcrypt.compareSync(password, userDoc.password);
-  if (passOk) {
-    const token = jwt.sign({ username, id: userDoc._id }, secret);
-    res.cookie('token', token, { httpOnly: true }).json({
-      id: userDoc._id,
-      username,
-    });
-  } else {
-    return errorResponse(res, 400, 'Wrong credentials');
+    const passOk = bcrypt.compareSync(password, userDoc.password);
+    if (passOk) {
+      const token = jwt.sign({ username, id: userDoc._id }, secret);
+      res.cookie('token', token, { httpOnly: true }).json({
+        id: userDoc._id,
+        username,
+      });
+    } else {
+      return errorResponse(res, 400, 'Wrong credentials');
+    }
+  } catch (e) {
+    return errorResponse(res, 500, 'Internal server error');
   }
 });
 
@@ -99,14 +103,18 @@ app.post('/post', async (req, res) => {
       return errorResponse(res, 401, 'Unauthorized');
     }
     
-    const postDoc = await Post.create({
-      title,
-      summary,
-      content,
-      cover,
-      author: info.id,
-    });
-    res.json(postDoc);
+    try {
+      const postDoc = await Post.create({
+        title,
+        summary,
+        content,
+        cover,
+        author: info.id,
+      });
+      res.status(201).json(postDoc); // Return the newly created post
+    } catch (e) {
+      return errorResponse(res, 400, 'Failed to create post');
+    }
   });
 });
 
@@ -124,35 +132,43 @@ app.put('/post', async (req, res) => {
       return errorResponse(res, 401, 'Unauthorized');
     }
 
-    const postDoc = await Post.findById(id);
-    if (!postDoc) {
-      return errorResponse(res, 404, 'Post not found');
-    }
+    try {
+      const postDoc = await Post.findById(id);
+      if (!postDoc) {
+        return errorResponse(res, 404, 'Post not found');
+      }
 
-    const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
-    if (!isAuthor) {
-      return errorResponse(res, 403, 'You are not the author');
-    }
+      const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
+      if (!isAuthor) {
+        return errorResponse(res, 403, 'You are not the author');
+      }
 
-    await postDoc.updateOne({
-      title,
-      summary,
-      content,
-      cover: cover || postDoc.cover,
-    });
-    
-    res.json(postDoc);
+      await postDoc.updateOne({
+        title,
+        summary,
+        content,
+        cover: cover || postDoc.cover,
+      });
+      
+      res.json(postDoc); // Return the updated post
+    } catch (e) {
+      return errorResponse(res, 400, 'Failed to update post');
+    }
   });
 });
 
 // Show the post at home page
 app.get('/post', async (req, res) => {
-  res.json(
-    await Post.find()
+  try {
+    const posts = await Post.find()
       .populate('author', ['username'])
       .sort({ createdAt: -1 })
-      .limit(20)
-  );
+      .limit(20);
+    res.json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    return errorResponse(res, 500, 'Server error');
+  }
 });
 
 // Post Page

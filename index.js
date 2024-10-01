@@ -23,6 +23,25 @@ app.use(express.json());
 app.use(cookieParser());
 
 mongoose.connect('mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority');
+// Login Page
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  const userDoc = await User.findOne({ username });
+  const passOk = bcrypt.compareSync(password, userDoc.password);
+  if (passOk) {
+    // logged in
+    jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
+      if (err) throw err;
+      res.cookie('token', token).json({
+        id: userDoc._id,
+        username,
+        token,
+      });
+    });
+  } else {
+    res.status(400).json('wrong credentials');
+  }
+});
 
 // Register Page
 app.post('/register', async (req, res) => {
@@ -39,42 +58,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Login Page
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  const userDoc = await User.findOne({ username });
-  const passOk = bcrypt.compareSync(password, userDoc.password);
-  if (passOk) {
-    // logged in
-    jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
-      if (err) throw err;
-      res.cookie('token', token).json({
-        id: userDoc._id,
-        username,
-      });
-    });
-  } else {
-    res.status(400).json('wrong credentials');
-  }
-});
-
-app.get('/profile', (req, res) => {
-  const { token } = req.cookies;
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  jwt.verify(token, secret, {}, (err, info) => {
-    if (err) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    res.json(info);
-  });
-});
-
-app.post('/logout', (req, res) => {
-  res.cookie('token', '').json('ok');
-});
-
 // Create Post Page
 app.post('/post', async (req, res) => {
   const token = req.headers.authorization;
@@ -86,18 +69,19 @@ app.post('/post', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
+    const { title, summary, content, cover } = req.body;
     const postDoc = await Post.create({
       title,
       summary,
       content,
-      cover, // Use the URL directly
+      cover ,
       author: info.id,
     });
     res.json(postDoc);
   });
 });
 
-// Edit Post
+// Edit Post Page
 app.put('/post', async (req, res) => {
   const token = req.headers.authorization;
   if (!token) {
@@ -107,20 +91,34 @@ app.put('/post', async (req, res) => {
     if (err) {
       return res.status(401).json({ error: 'Invalid token' });
     }
+
     const { id, title, summary, content, cover } = req.body;
-    const postDoc = await Post.findById(id);
-    const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
-    if (!isAuthor) {
-      return res.status(400).json('you are not the author');
-    }
-    await postDoc.updateOne({
+    const postDoc = await Post.findByIdAndUpdate(id, {
       title,
       summary,
       content,
-      cover: cover ? cover : postDoc.cover, // Update with new URL if provided
+      cover,
     });
-
     res.json(postDoc);
+  });
+});
+
+// Profile Page
+app.get('/profile', async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  jwt.verify(token, secret, {}, async (err, info) => {
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const userDoc = await User.findById(info.id);
+    if (!userDoc) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(userDoc);
   });
 });
 // Show the post at home page

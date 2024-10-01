@@ -130,6 +130,10 @@ app.get('/post', async (req, res) => {
       .limit(20)
   );
 });
+app.post('/logout', async (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logged out successfully' });
+});
 
 // Post Page
 app.get('/post/:id', async (req, res) => {

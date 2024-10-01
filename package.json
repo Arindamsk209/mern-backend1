@@ -1,22 +1,21 @@
 {
+  "name": "your-app-name", // Change this to your app's name
+  "version": "1.0.0",
   "scripts": {
-
-    "start": "node index.js",
-
-   
-    "build":"npm i"
-    
+    "start": "node index.js",  // Starts your application using Node.js
+    "dev": "nodemon index.js",  // Starts the application in development mode using nodemon
+    "build": "npm install"       // This installs all dependencies
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "global": "^4.4.0",
-    "jsonwebtoken": "^9.0.1",
-    "mongoose": "^7.3.4",
-    "multer": "^1.4.5-lts.1",
-    "nodemon": "^3.0.1",
-    "parser": "^0.1.4"
+    "bcryptjs": "^2.4.3",        // Library for hashing passwords
+    "cookie-parser": "^1.4.6",   // Middleware for parsing cookies
+    "cors": "^2.8.5",            // Middleware for enabling CORS
+    "express": "^4.18.2",        // Web framework for Node.js
+    "global": "^4.4.0",          // Global variable management
+    "jsonwebtoken": "^9.0.1",    // Library for creating and verifying JSON Web Tokens
+    "mongoose": "^7.3.4",        // MongoDB object modeling tool
+    "multer": "^1.4.5-lts.1",    // Middleware for handling multipart/form-data (file uploads)
+    "nodemon": "^3.0.1",         // Development tool that automatically restarts the server
+    "parser": "^0.1.4"           // (Consider checking if this is needed, as it's not commonly used)
   }
 }

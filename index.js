@@ -58,11 +58,15 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// User information header
 app.get('/profile', (req, res) => {
   const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
   jwt.verify(token, secret, {}, (err, info) => {
-    if (err) throw err;
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
     res.json(info);
   });
 });
@@ -73,11 +77,16 @@ app.post('/logout', (req, res) => {
 
 // Create Post Page
 app.post('/post', async (req, res) => {
-  const { title, summary, content, cover } = req.body; // Get cover image URL from request
   const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
   jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
+    const { title, summary, content, cover } = req.body;
     const postDoc = await Post.create({
       title,
       summary,
@@ -91,10 +100,15 @@ app.post('/post', async (req, res) => {
 
 // Edit Post
 app.put('/post', async (req, res) => {
-  const { id, title, summary, content, cover } = req.body; // Get cover image URL from request
   const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
   jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    const { id, title, summary, content, cover } = req.body;
     const postDoc = await Post.findById(id);
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {

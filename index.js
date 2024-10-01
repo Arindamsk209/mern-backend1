@@ -23,6 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 mongoose.connect('mongodb+srv://arindamsingh209:arindam@cluster1.29d0mug.mongodb.net/?retryWrites=true&w=majority');
+
 // Login Page
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -32,7 +33,8 @@ app.post('/login', async (req, res) => {
     // logged in
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) throw err;
-      res.cookie('token', token).json({
+      res.cookie('token', token, { httpOnly: true, secure: true });
+      res.json({
         id: userDoc._id,
         username,
         token,
@@ -121,6 +123,7 @@ app.get('/profile', async (req, res) => {
     res.json(userDoc);
   });
 });
+
 // Show the post at home page
 app.get('/post', async (req, res) => {
   res.json(
@@ -130,6 +133,7 @@ app.get('/post', async (req, res) => {
       .limit(20)
   );
 });
+
 app.post('/logout', async (req, res) => {
   res.clearCookie('token');
   res.json({ message: 'Logged out successfully' });
@@ -137,11 +141,14 @@ app.post('/logout', async (req, res) => {
 
 // Post Page
 app.get('/post/:id', async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params ;
   const postDoc = await Post.findById(id).populate('author', ['username']);
+  if (!postDoc) {
+    return res.status(404).json({ error: 'Post not found' });
+  }
   res.json(postDoc);
 });
-app.options('*', cors());
-app.listen(port, () => {
-  console.log('Server is running on port 4000');
+
+app.listen(port, () => { 
+  console.log(`Server is running on port ${port}`);
 });

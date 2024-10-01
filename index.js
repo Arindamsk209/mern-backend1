@@ -4,12 +4,11 @@ const mongoose = require("mongoose");
 const User = require('./models/User'); 
 const Post = require('./models/Post');
 const bcrypt = require('bcryptjs');
-const app = express();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 const salt = bcrypt.genSaltSync(10);
-const secret = 'asdfe45we45w345wegw345werjktjwertkj';
+const secret = process.env.JWT_SECRET || 'your-default-secret'; // Use environment variable for JWT secret
 const port = process.env.PORT || 4000;
 
 const corsOptions = {
@@ -18,6 +17,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
 };
 
+const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
@@ -43,6 +43,10 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const userDoc = await User.findOne({ username });
+  if (!userDoc) {
+    return res.status(400).json('wrong credentials');
+  }
+
   const passOk = bcrypt.compareSync(password, userDoc.password);
   if (passOk) {
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
@@ -59,9 +63,16 @@ app.post('/login', async (req, res) => {
 
 // User information header
 app.get('/profile', (req, res) => {
-  const { token } = req.cookies;
+  const token = req.cookies.token; // Check token directly
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
   jwt.verify(token, secret, {}, (err, info) => {
-    if (err) throw err;
+    if (err) {
+      console.error('JWT verification error:', err); // Log the error
+      return res.status(403).json({ message: 'Token is invalid' });
+    }
     res.json(info);
   });
 });
@@ -73,9 +84,16 @@ app.post('/logout', (req, res) => {
 // Create Post Page
 app.post('/post', async (req, res) => {
   const { title, summary, content, cover } = req.body; // Get cover image URL from request
-  const { token } = req.cookies;
+  const token = req.cookies.token; // Get token from cookies
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
   jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
+    if (err) {
+      console.error('JWT verification error:', err); // Log the error
+      return res.status(403).json({ message: 'Token is invalid' });
+    }
     const postDoc = await Post.create({
       title,
       summary,
@@ -90,9 +108,16 @@ app.post('/post', async (req, res) => {
 // Edit Post
 app.put('/post', async (req, res) => {
   const { id, title, summary, content, cover } = req.body; // Get cover image URL from request
-  const { token } = req.cookies;
+  const token = req.cookies.token; // Get token from cookies
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
   jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
+    if (err) {
+      console.error('JWT verification error:', err); // Log the error
+      return res.status(403).json({ message: 'Token is invalid' });
+    }
     const postDoc = await Post.findById(id);
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {
@@ -137,7 +162,5 @@ app.get('/post/:id', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log('Server is running on port 4000');
+  console.log(`Server is running on port ${port}`);
 });
-
-
